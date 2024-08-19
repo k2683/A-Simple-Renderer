@@ -38,9 +38,10 @@ make
 - 更新决策参数 `p`：
   - 如果 `p < 0`，则 `p` 更新为 `p + 2*dy`
   - 否则，`p` 更新为 `p + 2*(dy - dx)` 并且 `y` 增加一步
+重复以上过程，直到到达 `(x1, y1)`。
+
 # 实现效果
 ![image](https://github.com/user-attachments/assets/2d29b8ae-648d-40ac-8730-0df42da5ba21)
 
 
-重复以上过程，直到到达 `(x1, y1)`。
 
