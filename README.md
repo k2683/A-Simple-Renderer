@@ -21,6 +21,6 @@ render完成的tga图片在output文件夹下生成
 ### 深度测试和着色：
 
 使用z-buffer进行深度测试，确保在屏幕空间的每个像素位置只渲染离观察者最近的三角形面片。
-根据光照强度调整颜色的亮度，并将最终颜色绘制到图像的相应位置。
+暂时简单根据光照强度进行着色。
 # 实现效果
 ![image](https://github.com/user-attachments/assets/251791fd-444c-4b42-af47-f0ea693bf899)
