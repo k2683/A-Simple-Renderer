@@ -5,8 +5,11 @@
 
 ## 编译与运行
 需要绘制的obj文件放于obj文件夹下
+
 make
+
 ./main
+
 render完成的tga图片在output文件夹下生成
 
 ## render过程
