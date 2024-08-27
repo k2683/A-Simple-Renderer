@@ -27,3 +27,5 @@ render完成的tga图片在output文件夹下生成
 [View the README file](https://github.com/k2683/Games101-Homework/blob/Homework1/README.md)
 
 最后把标准化设备坐标系（NDC）转换为屏幕坐标系。
+# 实现效果
+![image](https://github.com/user-attachments/assets/8a5df9b1-af39-410e-9d02-88b8681bfa22)
