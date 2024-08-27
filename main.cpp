@@ -1,101 +1,97 @@
-#include <iostream>
 #include <vector>
-#include <algorithm>
+#include <iostream>
+#include <cmath>
 #include <limits>
 #include "tgaimage.h"
 #include "model.h"
 #include "geometry.h"
 
-const TGAColor WHITE(255, 255, 255, 255);
+const int width = 800, height = 800, depth = 255;
+Model *model = NULL;
+int *zbuffer = NULL;
+Vec3f light_dir = Vec3f(1, -1, 1).normalize(), eye(1, 1, 3), center(0, 0, 0);
 
-Model *model = nullptr;
-const int SCREEN_WIDTH = 800;
-const int SCREEN_HEIGHT = 800;
-TGAColor scaleColorIntensity(const TGAColor& color, float intensity) {
-    return TGAColor(
-        std::min(255, static_cast<int>(color.r * intensity)),
-        std::min(255, static_cast<int>(color.g * intensity)),
-        std::min(255, static_cast<int>(color.b * intensity)),
-        color.a  // Assuming a is the alpha component
-    );
+Matrix viewport(int x, int y, int w, int h) {
+    Matrix m = Matrix::identity(4);
+    m[0][3] = x + w / 2.f, m[1][3] = y + h / 2.f, m[2][3] = depth / 2.f;
+    m[0][0] = w / 2.f, m[1][1] = h / 2.f, m[2][2] = depth / 2.f;
+    return m;
 }
 
-Vec3f computeBarycentric2D(float x, float y, const Vec3f* pts) {
-    Vec3f v0 = pts[2] - pts[0], v1 = pts[1] - pts[0], v2 = Vec3f(x, y, 0.0f) - pts[0];
-    float d00 = v0 * v0;
-    float d01 = v0 * v1;
-    float d11 = v1 * v1;
-    float d20 = v2 * v0;
-    float d21 = v2 * v1;
-    float denom = d00 * d11 - d01 * d01;
-    float v = (d11 * d20 - d01 * d21) / denom;
-    float w = (d00 * d21 - d01 * d20) / denom;
-    float u = 1.0f - v - w;
-    return {u, v, w};
-}
-
-void rasterizeTriangle(const Vec3f* pts, const Vec3f* world_pts, float* zbuffer, TGAImage &image) {
-    Vec2f bboxmin( std::numeric_limits<float>::max(),  std::numeric_limits<float>::max());
-    Vec2f bboxmax(-std::numeric_limits<float>::max(), -std::numeric_limits<float>::max());
-    Vec2f clamp(image.get_width() - 1, image.get_height() - 1);
-
+Matrix lookat(Vec3f eye, Vec3f center, Vec3f up) {
+    Vec3f z = (eye - center).normalize(), x = (up ^ z).normalize(), y = (z ^ x).normalize();
+    Matrix res = Matrix::identity(4);
     for (int i = 0; i < 3; i++) {
-        bboxmin.x = std::max(0.0f, std::min(bboxmin.x, pts[i].x));
-        bboxmin.y = std::max(0.0f, std::min(bboxmin.y, pts[i].y));
-
-        bboxmax.x = std::min(clamp.x, std::max(bboxmax.x, pts[i].x));
-        bboxmax.y = std::min(clamp.y, std::max(bboxmax.y, pts[i].y));
+        res[0][i] = x[i], res[1][i] = y[i], res[2][i] = z[i], res[i][3] = -center[i];
     }
-
-    Vec3f P;
-    for (P.x = bboxmin.x; P.x <= bboxmax.x; P.x++) {
-        for (P.y = bboxmin.y; P.y <= bboxmax.y; P.y++) {
-            Vec3f bc_screen = computeBarycentric2D(P.x, P.y, pts);
-            if (bc_screen.x < 0 || bc_screen.y < 0 || bc_screen.z < 0) continue;
-            P.z = 0;
-			for (int i = 0; i < 3; i++) {
-				if (i == 0) P.z += pts[i].z * bc_screen.x;
-				if (i == 1) P.z += pts[i].z * bc_screen.y;
-				if (i == 2) P.z += pts[i].z * bc_screen.z;
+    return res;
 }
-            int idx = int(P.x + P.y * SCREEN_WIDTH);
+
+void triangle(Vec3i t0, Vec3i t1, Vec3i t2, float ity0, float ity1, float ity2, TGAImage &image, int *zbuffer) {
+    if (t0.y == t1.y && t0.y == t2.y) return;
+    if (t0.y > t1.y) std::swap(t0, t1), std::swap(ity0, ity1);
+    if (t0.y > t2.y) std::swap(t0, t2), std::swap(ity0, ity2);
+    if (t1.y > t2.y) std::swap(t1, t2), std::swap(ity1, ity2);
+
+    int total_height = t2.y - t0.y;
+    for (int i = 0; i < total_height; i++) {
+        bool second_half = i > t1.y - t0.y || t1.y == t0.y;
+        int segment_height = second_half ? t2.y - t1.y : t1.y - t0.y;
+        float alpha = (float)i / total_height;
+        float beta = (float)(i - (second_half ? t1.y - t0.y : 0)) / segment_height;
+        Vec3i A = t0 + Vec3f(t2 - t0) * alpha;
+        Vec3i B = second_half ? t1 + Vec3f(t2 - t1) * beta : t0 + Vec3f(t1 - t0) * beta;
+        float ityA = ity0 + (ity2 - ity0) * alpha;
+        float ityB = second_half ? ity1 + (ity2 - ity1) * beta : ity0 + (ity1 - ity0) * beta;
+        if (A.x > B.x) std::swap(A, B), std::swap(ityA, ityB);
+        for (int j = A.x; j <= B.x; j++) {
+            float phi = B.x == A.x ? 1. : (float)(j - A.x) / (B.x - A.x);
+            Vec3i P = Vec3f(A) + Vec3f(B - A) * phi;
+            float ityP = ityA + (ityB - ityA) * phi;
+            int idx = P.x + P.y * width;
+            if (P.x >= width || P.y >= height || P.x < 0 || P.y < 0) continue;
             if (zbuffer[idx] < P.z) {
                 zbuffer[idx] = P.z;
-                float intensity = (world_pts[0] - world_pts[1]).norm() * bc_screen.y + (world_pts[1] - world_pts[2]).norm() * bc_screen.z + (world_pts[2] - world_pts[0]).norm() * bc_screen.x;
-				image.set(P.x, P.y, scaleColorIntensity(WHITE, intensity));
+                image.set(P.x, P.y, TGAColor(255, 255, 255) * ityP);
             }
         }
     }
 }
 
-Vec3f projectVertexToScreen(const Vec3f& vertex) {
-    return Vec3f(int((vertex.x + 1.0) * SCREEN_WIDTH / 2.0 + 0.5), int((vertex.y + 1.0) * SCREEN_HEIGHT / 2.0 + 0.5), vertex.z);
-}
-
-void renderModel(TGAImage &image) {
-    float *zbuffer = new float[SCREEN_WIDTH * SCREEN_HEIGHT];
-    std::fill(zbuffer, zbuffer + SCREEN_WIDTH * SCREEN_HEIGHT, -std::numeric_limits<float>::max());
-
-    for (int i = 0; i < model->nfaces(); i++) {
-        Vec3f screen_coords[3], world_coords[3];
-        for (int j = 0; j < 3; j++) {
-            world_coords[j] = model->vert(model->face(i)[j]);
-            screen_coords[j] = projectVertexToScreen(world_coords[j]);
-        }
-        rasterizeTriangle(screen_coords, world_coords, zbuffer, image);
-    }
-
-    delete[] zbuffer;
-}
-
-int main(int argc, char** argv) {
+int main(int argc, char **argv) {
     model = argc == 2 ? new Model(argv[1]) : new Model("obj/african_head.obj");
-    TGAImage image(SCREEN_WIDTH, SCREEN_HEIGHT, TGAImage::RGB);
+    zbuffer = new int[width * height];
+    for (int i = 0; i < width * height; i++) zbuffer[i] = std::numeric_limits<int>::min();
 
-    renderModel(image);
+    Matrix ModelView = lookat(eye, center, Vec3f(0, 1, 0)), Projection = Matrix::identity(4), ViewPort = viewport(width / 8, height / 8, width * 3 / 4, height * 3 / 4);
+    Projection[3][2] = -1.f / (eye - center).norm();
+    Matrix z = ViewPort * Projection * ModelView;
+    TGAImage image(width, height, TGAImage::RGB);
+    for (int i = 0; i < model->nfaces(); i++) {
+        std::vector<int> face = model->face(i);
+        Vec3i screen_coords[3];
+        Vec3f world_coords[3];
+        float intensity[3];
+        for (int j = 0; j < 3; j++) {
+            Vec3f v = model->vert(face[j]);
+            screen_coords[j] = Vec3f(ViewPort * Projection * ModelView * Matrix(v));
+            world_coords[j] = v;
+            intensity[j] = model->norm(i, j) * light_dir;
+        }
+        triangle(screen_coords[0], screen_coords[1], screen_coords[2], intensity[0], intensity[1], intensity[2], image, zbuffer);
+    }
+    image.flip_vertically();
+    image.write_tga_file("output/output.tga");
 
-    image.flip_vertically(); // Set the origin to the bottom-left corner
-    image.write_tga_file("/output/african_head.tga");
+    TGAImage zbimage(width, height, TGAImage::GRAYSCALE);
+    for (int i = 0; i < width; i++) {
+        for (int j = 0; j < height; j++) {
+            zbimage.set(i, j, TGAColor(zbuffer[i + j * width]));
+        }
+    }
+    zbimage.flip_vertically();
+    zbimage.write_tga_file("zbuffer.tga");
     delete model;
+    delete[] zbuffer;
     return 0;
 }
