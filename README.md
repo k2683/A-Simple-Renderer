@@ -1,5 +1,5 @@
 # 项目简介
-这是一个从零开始搭建的基础渲染器项目。除了使用 [tinyrender](https://github.com/ssloy/tinyrenderer) 提供的 tgaimage.h 和 tgaimage.cpp 文件来读取图片外，项目的其余部分均为手动实现。这是一个非常适合深入理解渲染管线的实践项目。
+这是一个从零开始搭建的基础渲染器项目。除了使用 [tinyrender](https://github.com/ssloy/tinyrenderer) 提供的 tgaimage.h 和 tgaimage.cpp 文件来读取图片外，项目的其余部分均为手动实现。渲染所用的obj文件也来自于[tinyrender](https://github.com/ssloy/tinyrenderer) ，这是一个非常适合深入理解渲染管线的实践项目。
 
 OpenGL 的渲染管线可以概述如下：
 ![image](https://github.com/user-attachments/assets/745f8c4f-0c20-474d-ab1f-ed01d139904c)
@@ -22,6 +22,6 @@ make
 ```
 render完成的tga图片在output文件夹下生成
 
-# 实现效果
+# 渲染效果
 ![image](https://github.com/user-attachments/assets/7acbe656-5c52-406a-87ae-b1b68823f513)
 ![image](https://github.com/user-attachments/assets/da82e868-ab0b-4e3f-8256-a761f9d43b91)
