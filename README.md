@@ -34,6 +34,8 @@ render完成的tga图片在output文件夹下生成
 进行phong shading计算，确定当前像素的颜色。
 
 如果片段没有被丢弃，并且通过了深度测试，则将颜色值写入目标图像，将深度值写入深度缓冲区。
+
+至于实现的细节部分比如phong shading的计算，uv的读取以及向量的变换原理可以参考[games101的作业3](https://github.com/k2683/Games101-Homework/edit/Homework3/README.md)
 # 实现效果
 ![image](https://github.com/user-attachments/assets/df723608-d5b2-4494-8e99-43678c87ae6d)
 
