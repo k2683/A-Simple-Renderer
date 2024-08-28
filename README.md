@@ -16,6 +16,7 @@ render完成的tga图片在output文件夹下生成
 在逐像素render和Z buffer的过程外加上了MVP变换
 
 ## MVP变换
+我们的模型是在他们自己的本地框架中创建的。它们进入到以世界坐标表示的场景中，从一个到另一个的转换是通过矩阵 Model 进行的。然后，我们想用相机（眼睛坐标）来表达它，这个转换叫做 View。然后，我们使用 Projection 矩阵对场景进行变形以创建透视变形，该矩阵将场景转换为clip coordinates。最后，我们绘制场景，将clip coordinates转换为屏幕坐标的矩阵称为 Viewport。
 ### Model变换
 将物体从它自身的局部坐标系转换到世界坐标系。
 ### View变换
