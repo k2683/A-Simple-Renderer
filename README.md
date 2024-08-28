@@ -35,5 +35,7 @@ render完成的tga图片在output文件夹下生成
 
 如果片段没有被丢弃，并且通过了深度测试，则将颜色值写入目标图像，将深度值写入深度缓冲区。
 # 实现效果
+![image](https://github.com/user-attachments/assets/df723608-d5b2-4494-8e99-43678c87ae6d)
+
 <img width="389" alt="image" src="https://github.com/user-attachments/assets/096f2fe0-0344-4fb5-a8e3-b12d0a7aa937">
 
